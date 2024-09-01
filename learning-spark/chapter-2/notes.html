@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <div class="container">
+        <section class="spark directories">
+            <h2>Main Points</h2>
+            <ul>
+                <li>bin: scripts employed to interact with Spark, including Spark shells.</li>
+                <li>sbin: Adminstrative scripts, starting and stopping Spark components.</li>
+                <li>kubernetes: Dockerfiles for creating Docker images for Spark distribution on kubernetes clusters.</li>
+                <ii>data: *.txt files, input for Spark's components</ii>
+            </ul>
+        </section>
+
+        <section class="elaboration">
+            <h2>Using Local Machine</h2>
+            <p>Spark interpretive shells locally, running on local mode. Spark computations are expressed as operations, converted
+                into low-level RDD-based bytecode as tasks, distributed to spark's executors for executions.<br>
+
+                We use high-level Structured APIs to read text files into a Spark DataFrame rather than a RDD (considered low-level).
+                Every high-level Structured APIs is decomposed into low-level optimised and generated  RDD operations and converted 
+                into Scala bytecode for the executors' JVMs. The RDDs are not accessable to users, not the same as RDD APIs.
+            </p>
+        </section>
+
+        <section class="code">
+            <h2>Code</h2>
+            <pre><code>
+show(10, false): displays first 10 lines without truncating;by default true.
+            </code></pre>
+        </section>
+
+        <section class="elaboration">
+            <h2>Understanding Spark Application Concepts</h2>
+            <ul>
+                <li>Application: build on spark using it's API, consists of a driver program and executors on the cluster.</li>
+                <li>SparkSession: Point of entry</li>
+                <li>Job: Parallel computation consisting of multiple tasks, spawn due to Spark action [save(), collect()]</li>
+                <li>Stage: Job divided into smaller sets of tasks, depends on each other</li>
+                <li>Task: Single unit of work, sent to Spark executor</li>
+            </ul>
+
+            <p>
+                Spark Jobs: Driver converts your Spark application into one or more Spark jobs, transforms each job into a DAG.
+                Each node within a DAG could be a single or multiple Spark stage.<br>
+                
+                Spark Stage: Created based on what operation can be performed serially or in parallel. Often, stages are 
+                delineated on the operator's computation boundaries, where they dictate data transfers among Spark executors.<br>
+
+                Spark Tasks: A unit of execution, mapped to a single Spark coreand works on a single partition of data. Hence, a 
+                executor with 16 cores can have 16 or more tasks working on 16 or more partitions in parallel.
+
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Transformation, Actions and Lazy Evaluation</h2>
+            <p>Transformation: transform a Spark DataFrame into a new DF without altering original data, immutability. 
+                Select() or filter() will not change original DF.<br>
+                
+                Actions: Trigger lazy evaluation, keeps lineage. Rearrange certain transformations, coalesce them 
+                or optimises transformatons into stages for more effcient executions.<br>
+
+                Because Spark records each transformation in its lineage and the DataFrames are immutable between transformations,
+                 it can reproduce its original state by simply replaying the recorded lineage, giving it resiliency 
+                 in the event of failures.
+            </p>
+        </section>
+
+
+        <section class="elaboration">
+            <h2>Narrow and Wide Transformation</h2>
+            <p>his optimization can be done by either joining or pipelining some operations and assigning them to a stage,
+                 or breaking them into stages by determining which operations require a shuffle or exchange of data across clusters.<br>
+
+                Narrow dependencies: A single output parition can be computed from a single input partition (Narrow Transformation).
+                Eg:filter() and contains() operate on a single partition and produce the resulting output partition without exchange of data.<br>
+
+                wide transformation: groupBy() and orderBy() data from other partitions are read in, combined and written to disc. 
+                count(groupBy()) will force shuffle of data from each of the executor's partition in the cluster. 
+                </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Spark UI</h2>
+            <ul>
+                <li>A list of scheduler stages and tasks.</li>
+                <li>A summary of RDD sizes and memory usage.</li>
+                <li>Information about the environment.</li>
+                <li>Information about the running executors.</li>
+                <li>All the Spark SQL Queries.</li>
+            </ul>
+            <p>Runs on port 4040. Stage 0: comprised of 1 task. If u have multiple tasks, they will be executed in parallel.<br>
+                To avoid having verbose INFO messages printed to the console, copy the log4j.properties.template
+                 file to log4j.properties and set log4j.rootCategory=WARN in the conf/log4j.properties file.
+            </p>
+        </section>
+
+        <section class="code">
+            <h2>Code</h2>
+            <pre><code>
+// Your code snippet here
+def example_function():
+    print("Hello, world!")
+            </code></pre>
+        </section>
+
+        <section class="diagrams">
+            <h2>Diagrams</h2>
+            <img src="your-diagram.png" alt="Diagram description">
+        </section>
+
+        <section class="example-questions">
+            <h2>Example Questions</h2>
+            <p>Q1: What is the purpose of the code above?</p>
+            <p>Q2: Explain the key concepts from the main points.</p>
+        </section>
+    </div>
+</body>
+</html>
