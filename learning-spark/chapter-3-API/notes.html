@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <div class="container">
+        <section class="Underneath an RDD">
+            <h2>Main Points</h2>
+            <ul>
+                <li>Dependencies: Instructs Spark how an RDD is constructed</li>
+                <li>Partitions: Split work to parallelise computations</li>
+                <li>Compute Function: Partition => Iterator[T]</li>
+            </ul>
+
+            <p>Spark can recreate an RDD from these dependcies, giving RDD resiliency. Spark users locality information,
+                less data transmitted over the network. Compute function then produces an Iterator[T] for data
+                stored in RDDs.<br>
+
+                Spark does not know what you are doing in the compute function, only sees as lambda expression. Iterator[T],
+                not seen by RDDs, only know that it's a generic object in Python. Hence no way to optimise the expression. 
+                Spark has no knowledge of specific data type in T, unable to use any data compression techniques.
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Structuring Spark</h2>
+            <p>Provides high-level operations such as filteriing, selecting, counting, aggregating, averaging and 
+                grouping, prividing clarity and simplicity. Tell Spark what you wish to compute with your data, construct
+                an effcient query plan for execution. Also allows us to arrange our data in tabular format, like
+                SQL table with supported structured data types. <br>
+
+                Spark 2.0 provides expressivity and composability by telling spark what we want to compute instead of how.
+                These high-level DSL operators and APIs allow us to compose an entire computation using simple queries. 
+                We can switch back to the unstructured low-level RDD APIs at anytime. Provides uniformity across languages.
+                DataFrames are immutable and Spark keeps a lineage of all transformations.
+            </p>
+
+
+        </section>
+
+        <section class="elaboration">
+            <h2>Spark's DataTypes</h2>
+            <h4>Spark's Basic DataTypes</h4>
+            <img src="images/Screenshot 2024-09-02 at 10.37.19 AM.png" alt="Diagram description">
+            <h4>Spark's Structured and Complex Data Types</h4>
+            <img src="images/Screenshot 2024-09-02 at 10.40.52 AM.png" alt="Diagram description">
+            <p>Detailed explanations and descriptions go here.</p>
+            <h4>Defining a Schema:</h4>
+            <ul>
+                <li>relieve Spark from the onus of inferring data types</li>
+                <li>prevent Spark from creating a separate job just to read a large portion of
+                    your file to ascertain the schema
+                </li>
+                <li>detect errors early if data doesn't match the schema</li>
+            </ul>
+            <h4>Define Schema programmatically</h4>
+            <img src="images/Screenshot 2024-09-02 at 10.45.39 AM.png" alt="Diagram description">
+            <h4>Data Definition Language(DDL) string</h4>
+            <img src="images/Screenshot 2024-09-02 at 10.46.55 AM.png" alt="Diagram description">
+            <p>blogs_df = spark.createDataFrame(data, schema). To use back the schema blogs_df.schema.</p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Columns and Rows</h2>
+            <p>expr("columnName * 5") or (expr("columnName - 5") > col(anothercolumnName)), where columnName is a Spark type (int, str), expr() is part of pyspark.sql.functions, computing the results. col() is a standard,
+                built-in function that returns a Column. blogs_df.sort(col("Id").desc) and blogsDF.sort($"Id".desc) are identical.<br>
+
+                DataFrameReader: spark.read.csv(sf_fire_file, header=True, schema=fire_schema). DataFrameWriter: 
+                fire_df.write.format("parquet").saveAsTable(parquet_path).
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Transformations and Actions</h2>
+            <p>
+                Projections: rows matching a certain relational condition by using select(). Filter done with filter() or where(). Make distinct CallTypes with agg(countDistinct("CallType").alias("DistinctCallTypes")). <br>
+
+                Renaming, adding and dropping columns: By specifying the desired column names with StructField or with withColumnRenamed(). Results in new DataFrame while retaining the original DF. to_timestamp(col("CallDate"), "MM/dd/yyyy")/to_date(). Afterwards, drop() old column. Able to use functions like month(), year() and day(). <br>
+
+                Aggregations: groupBy(), orderBy() and count() aggregate column names then count.<br>
+                
+                Functions as an arguement to the Dataset method filter(). This is an overloaded method.fil ter(func: (T) > Boolean): Dataset[T], takes a lambda function, func: (T) > Boolean, as its argument
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>DataFrame vs DataSets</h2>
+            <ul>
+                <li>Datasets: Strict compile-time type safety</li>
+                <li>DataFrames: Relational transformations similar to SQL-like queries </li>
+                <li>Datasets: Benefits from Tungstem's effcient serialization with Encoders</li>
+                <li>Dataframes: unifications, code optimisations and similifications of APIs</li>
+                <li>RDDs: more control as Python user</li>
+            </ul>
+            <p>count_mnm_df.explain(True) to see the different stages the Python code goes through. </p>
+            <ul>
+                <li>1. Analysis: SQL engine generates an abstract syntax tree (AST). Column and table names will be resolved using internal Catalog.</li>
+                <li>2. Logical Optimisaiton: Catalyst optimiser will first construct a set of multiple plans then use cost-based optimiser (CBO), which costs assigned to each plan. Eg: process of constant folding, predicate pushdown, projection prunning.</li>
+                <li>3. Physical Planning: Generates an optimial physical plan for the selected logical plan by matching those available in the Spark execution engine.</li>
+                <li>4. Code Generation: Generates efcient Java bytecode to run on JVM using Spark SQL as a compiler. Project Tungsten, which facilitates whole-stage code generation, collapses the whole query into a single function to generate a compact RDD code for execution.</li>
+            </ul>
+        </section>
