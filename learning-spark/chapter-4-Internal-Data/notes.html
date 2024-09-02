@@ -71,11 +71,6 @@
         </section>
 
         <section class="elaboration">
-            <h2>Elaboration</h2>
-            <p>Detailed explanations and descriptions go here.</p>
-        </section>
-
-        <section class="elaboration">
             <h2>MetaData</h2>
             <p>
                 Metadata captured in Catalog, a high-level abstraction in Spark SQL for storing metadata.<br>
@@ -93,27 +88,113 @@ spark.catalog.listColumns("us_delay_flights_tbl")
 CACHE [LAZY] TABLE <table-name>
 UNCACHE TABLE <table-name>
                 </code></pre>
+
             </p>
         </section>
 
-        <section class="code">
-            <h2>Code</h2>
+        <section class="elaboration">
+            <h2>Data Sources for Dataframes and SQL Tables</h2>
+
+            <h4>DataFrameReader</h4>
+
+            <p>
+                Recommended format: DataFrameReader.format(args).option("key", "value").schema(args).load()<br>
+                SparkSession.read: To get instance handle to DF Reader.<br>
+                SparkSession.readStream: returns an instance to read from a streaming source.<br>
+                
+                <img src="images/Screenshot 2024-09-02 at 4.07.43 PM.png" alt="Diagram description">
+
+                In general, no schema is needed when reading from a static Parquet data source—the Parquet
+                 metadata usually contains the schema, so it's inferred. However, for streaming data sources
+                  you will have to provide a schema.<br>
+            </p>
+
+            <h4>DataFrameWriter</h4>
+
+            <p>
+                Recommended Format: DataFrameWriter.format(args).option(args).bucketBy(args).partitionBy(args).save(path)/
+                DataFrameWriter.format(args).option(args).sortBy(args).saveAsTable(table)<br>
+            </p>
+            <img src="images/Screenshot 2024-09-02 at 4.11.40 PM.png" alt="Diagram description">
+        </section>
+
+        <section class="elaboration">
+            <h2>Common Data Formats</h2>
+
+            <h4>Parquet</h4>
+            <p>
+                Supported and widely used by many big data processing frameworks and platforms, Parquet is an open
+                 source columnar file format that offers many I/O optimizations (such as compression, which saves 
+                 storage space and allows for quick access to data columns).<br>
+
+                Parquet files are stored in a directory structure that contains the data files, metadata, a number
+                 of compressed files, and some status files. Metadata in the footer contains the version of the file
+                  format, the schema, and column data such as the path, etc.<br>
+                
+                  <h5>Reading in Data</h5>
+                <pre><code>
+file = """/databricks-datasets/learning-spark-v2/flights/summary-data/parquet/
+2010-summary.parquet/"""
+df = spark.read.format("parquet").load(file)
+                </code></pre>
+
+                Unless you are reading from a streaming data source there's no need to supply the
+                schema, because Parquet saves it as part of its metadata.<br>
+
+                <h5>Writing Data</h5>
+                <pre><code>
+(df.write.format("parquet")
+    .mode("overwrite")
+    .option("compression", "snappy")
+    .save("/tmp/data/parquet/df_parquet"))
+
+(df.write
+    .mode("overwrite")
+    .saveAsTable("us_delay_flights_tbl"))
+                </code></pre>
+            </p>
+            <h4>JSON</h4>
+            <p>It has two rep-resentational formats: single-line mode and multiline mode. Both modes are supported in Spark.
+                In single-line mode each line denotes a single JSON object, whereas in multiline mode the entire multiline 
+                object constitutes a single JSON object. To read in this mode, set multiLine to true in the option() method.<br>
+            </p>
+            <img src="images/Screenshot 2024-09-02 at 4.22.14 PM.png" alt="Diagram description">
+
+            <h4>CSV</h4>
+            <img src="images/Screenshot 2024-09-02 at 4.23.12 PM.png" alt="Diagram description">
+
+            <h4>Avro</h4>
+            <p>
+                by Apache Kafka for message serializing and deserializing. It offers many benefits, including direct mapping to
+                 JSON, speed and efficiency, and bindings available for many programming languages.<br>
+            </p>
+            <img src="images/Screenshot 2024-09-02 at 4.23.26 PM.png" alt="Diagram description">
+
+            <h4>ORC</h4>
+            <p>
+                When spark.sql.orc.impl is set to native and spark.sql.orc.enableVectorize dReader is set to true, Spark uses the vectorized ORC reader. A vectorized reader
+                reads blocks of rows (often 1,024 per block) instead of one row at a time, streamlining operations and reducing CPU usage for intensive operations like scans, filters, aggregations, and joins.<br>
+                
+                For Hive ORC SerDe (serialization and deserialization) tables created with the SQL command USING HIVE OPTIONS (fileFormat 'ORC'), the vectorized reader is used when the Spark configuration 
+                parameter spark.sql.hive.convertMetastoreOrc is set to true.<br>
+            </p>
+
+            <h4>Images</h4>
+
+            <p>Stores metadata information about the image.</p>
             <pre><code>
-// Your code snippet here
-def example_function():
-    print("Hello, world!")
+from pyspark.ml import image
+image_dir = "/databricks-datasets/learning-spark-v2/cctvVideos/train_images/"
+images_df = spark.read.format("image").load(image_dir)
+images_df.printSchema()
             </code></pre>
-        </section>
 
-        <section class="diagrams">
-            <h2>Diagrams</h2>
-            <img src="your-diagram.png" alt="Diagram description">
-        </section>
-
-        <section class="example-questions">
-            <h2>Example Questions</h2>
-            <p>Q1: What is the purpose of the code above?</p>
-            <p>Q2: Explain the key concepts from the main points.</p>
+            <h4>Binary Files</h4>
+            <p>
+                Stores information such as path: StringType, modificationTime: TimestampType, length: LongType, content: BinaryType<br>
+                pathGlobFilter: find files with matching pattern .option("pathGlobFilter", "*.jpg").<br>
+                To ignore partitioning data discovery in a directory, you can set recursiveFile Lookup to "true"<br>
+            </p>
         </section>
     </div>
 </body>
