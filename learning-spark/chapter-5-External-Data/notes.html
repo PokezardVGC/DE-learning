@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <div class="container">
+        <section class="main-points">
+            <h2>Interacting with external Data Sources</h2>
+            <ul>
+                <li>User Defined Functions (UDF) for both Apache Hive and Spark</li>
+                <li>Connect with external data sources such as JDBC, SQL databases and Tableau</li>
+                <li>Work with simple and complex types, higher-order functions, and common relational operators</li>
+            </ul>
+        </section>
+
+        <section class="elaboration">
+            <h2>Spark SQL and Apache Hive</h2>
+            <p>First interactive SQL query engine on Hadoop systems. Possible for fast enterprise data warehouse and scaling well in Hive/MapReduce. 
+                Able to leverage faster preformance (declarative queries) and relational programming (oprimized storage).<br><br>
+
+                UDF: Able to make use of UDF within Spark SQL. Eg: a data scientist can wrap a ML model within a UDF so that a analyst can query
+                it's predictions in Spark SQL without necessarily understanding the internals of the model. UDFs operations per session and they
+                will not be persisted in the underlying metastore.<br>
+                <pre><code>
+# In Python
+from pyspark.sql.types import LongType
+
+# Create cubed function
+def cubed(s):
+    return s * s * s
+
+# Register UDF
+spark.udf.register("cubed", cubed, LongType())
+# Generate temporary view
+spark.range(1, 9).createOrReplaceTempView("udf_test")
+
+spark.sql("SELECT id, cubed(id) AS id_cubed FROM udf_test").show()
+                </code></pre>
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Spark SQL and Pyspark UDFs</h2>
+            <p>Spark SQL does not guarantee the order of evaluation of subexpression (eg: checking for NOT NULL and strlen(s) > 1 on same line.).
+                Hence we need to make UDFs null-aware or use IF or CASE WHEN expression for conditionals. <br><br>
+
+                Previous PySpark UDFs requires data movement between JVM and Python, which was quite expensive. Pandas UDF introduced using Apache Arrows
+                to work with Pandas. You define a Pandas UDF using the keyword `pandas_udf` as the decorator. Once the data is in Apache Arrow format, 
+                there is no longer a need to serialise the data as it is already in a format consumable by the Python processor. From Spark 3.0
+                onwards, spilit into Pandas UDFs and Pandas Function APIs.<br><br>
+
+                Pandas UDFs: Infers the type from Python types to Pandas.Series, pandas.DataFrame, Tuple and Iterator, no manual specifications.<br><br>
+
+                Pandas Function APIs: Directly apply a local Python function for a PySpark DataFrame where bith the input and output are Pandas instances.
+                APIs are group map, map, co-grouped map.<br><br>
+
+                As opposed to a local function, using a vectorised UDF will result in the execution of Spark job; the previous local function is a 
+                Pandas function executed only on the Spark Driver.<br><br>
+  
+                <img src="images/Screenshot 2024-09-14 115340.png" alt="Diagram description">
+
+                Spark job starts with `parallelize()` to send local data (Arrow binary batches) to executors and calls `mapPartitions()` to convert
+                the Arrow binary batches to Spark's internal data format, which can be distributed to the Spark workers. `WholeStageCodegen` which
+                represent a fundamental step up in performance. `ArrowEvalPython` step that identifies a Pandas UDF is being executed.<br>
+            </p>
+        </section>
+
+
+        <section class="elaboration">
+            <h2>Querying with Spark SQL Shell, Beeline and Tableau</h2>
+
+            <h3>Using Spark SQL Shell</h3>
+            <p>
+                Communicates with the Hive metastore in local mode, does not talk to Thrift JDBC/ODBC (Spark Thrift Server). STS allows 
+                JDBC/ODBC clients to execute SQL queries over JDBC and ODBC protocols on Apache Spark.<br>
+
+                Creation of the Spark SQL table should be in `/user/hive/warehouse`.
+            </p>
+
+            <h3>Working with Beeline</h3>
+            <p>
+                A common utility for running HiveQL queries agaisnt HiveServer2. Beeline is a JDBC client based on the SQLLine CLI. Able to
+                use the same utility to execute Spark SQL queries agaisnt the Spark Thrift server.
+            </p>
+
+            <h3>Working with Tableau</h3>
+            <p>
+                Able to connect to Spark SQL via the Thrist JDBC/ODBC server. 
+            </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>External Data Sources</h2>
+            
+            <h3>JDBC and SQL Databases</h3>
+            <p>
+                Spark SQL can read data from other databases using JDBC. It returns results in DataFrame, hence providing all the benefits of Spark SQL.
+                Need specify the JDBC driver for your JDBC data source and it will need to be on the Spark classpath from $SPARK_HOME folder.<br><br>
+
+                <pre><code>
+./bin/spark-shell --driver-class-path $database.jar --jars $database.jar
+                </code></pre>
+            </p>l
+
+                <img src="images/Screenshot 2024-09-14 144909.png" alt="Diagram description">
+                
+                <p>
+                    Partitioning: Splits data into x no of partitions based on column from lower to upper bound.
+                </p>
+                
+                <img src="images/Screenshot 2024-09-14 144931.png" alt="Diagram description">
+
+                <p>
+                    A good starting point for `numPartitions` is to use a multiple of the number of Spark workers. For example, if you have four Spark
+                    worker nodes, we can start with 4 or 8 partitions. Fpr systems that have processing windows, you can maximise the number of concurrent 
+                    requests to the source system; for ststems lacking processing windows (eg: OLTP system contuniously processing data), you
+                    should reduce the number of concurrent requests to prevent stauration of the source system. <br><br>
+
+                    Initially, calculate the lowerBound and upperBound based on the minimum and maximum partitionColumn actual values. <br><br>
+
+                    Choose a partitionColumn that can be uniformly distributed to avoid skew data. If possible, generate a new column 
+                    (perhaps a hash of multiple columns) to more evenly distribute your partitions.<br><br>
+                </p>
+
+                <h3>PostgreSQL</h3>
+                <p>
+                    To connect, build or download the JDBC jar from Maven and add it to your classpath.
+
+                    <pre><code>
+bin/spark-shell --jars postgresql-42.2.6.jar
+                    </code></pre>
+                    
+                    <img src="images/Screenshot 2024-09-14 151612.png" alt="Diagram description">
+                </p>
+        </section>
+
+        <section class="elaboration">
+            <h2>Higher-Order Functions</h2>
+
+            <ul>
+                <li>Exploding the nested structure into individual rows, apploying some functions and re-creating the nested structure.</li>
+                <li>Building UDF</li>
+            </ul>
+
+            <h3>Explode and collect</h3>
+            <pre><code>
+-- In SQL
+SELECT id, collect_list(value + 1) AS values
+FROM  (SELECT id, EXPLODE(values) AS value
+    FROM table) x
+GROUP BY id
+            </code></pre>            
+            <p>While collect_list() returns a list of objects with duplicates, the GROUP BY statement requires shuffle operations, meaning
+                the order of the re-collected array isn't the same as original array. Could be expensive approach.
+            </p>
+
+            <h3>User-Defined Function</h3>
+            <pre><code>
+-- In SQL
+SELECT id, collect_list(value + 1) AS values
+FROM  (SELECT id, EXPLODE(values) AS value
+    FROM table) x
+GROUP BY id
+
+## In Python
+spark.sql("SELECT id, plusOneInt(values) AS values FROM table").show()
+            </code></pre>   
+
+            <p>
+                No ordering issues, but the serialization and deserialization process itself might be expensive. collect_list() may
+                cause executors to experience out-of-memory issues for large datasets, whereas using UDFs would alleviate these issues.<br><br>
+
+                Consider using built in functions such as array_distinct, array_intersect.<br><br>
+            </p>
+
+            <h3>Higher-Order Functions</h3>
+            <ul>
+                <li>Transform: takes array(values) and anonymous function(lambda) as input. Creates a new array by applying lambda.</li>
+                <li>Filter: Produce array consisting only of elements of input array for which Boolean function is true.</li>
+                <li>Exists: Return True of boolean function holds for any element in input array.</li>
+                <li>Reduce: Aggregate then apply final function (same as Reduce in MapReduce)</li>
+            </ul>
+
+        </section>
+
+        <section class="elaboration">
+            <h2>Common DataFrame and Spark SQL Operations</h2>
+            
+            <h3>Union and Joins</h3>
+            <ul>
+                <li>Union: duplication of data is expected</li>
+                <li>Join: inner, outer, cross, left, right joins.</li>
+            </ul>
+
+            <h3>Windowing</h3>
+
+            <p>Uses values from the rows in a window to return a set of values, typically in the form of another row.</p>
+            <pre><code>
+-- In SQL
+spark.sql("""
+SELECT origin, destination, TotalDelays, rank 
+    FROM ( 
+    SELECT origin, destination, TotalDelays, dense_rank() 
+        OVER (PARTITION BY origin ORDER BY TotalDelays DESC) as rank 
+        FROM departureDelaysWindow
+    ) t 
+WHERE rank <= 3
+""").show()
+            </code></pre>
+        
+        
+        </section>
+
+        <div class="container">
+            <section class="main-points">
+                <h2>Modifications</h2>
+                <ul>
+                    <li>Adding new Columns: withColumn()</li>
+                    <li>Dropping Columns: drop()</li>
+                    <li>Renaming Columns: rename()</li>
+                    <li>Pivoting: Pivlot() swap columns for rows or map values (1 to Jan)</li>
+                </ul>
+            </section>
+    </div>
+</body>
+</html>
